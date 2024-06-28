@@ -8,7 +8,7 @@
 		<AssemblyName>$(MSBuildProjectName)</AssemblyName>
 		<RootNamespace>Bitvantage.InternetProtocol</RootNamespace>
 		<Title>Bitvantage.InternetProtocol.NetworkPrefix</Title>
-		<PackageProjectUrl>https://github.com/Bitvantage/Network</PackageProjectUrl>
+		<PackageProjectUrl>https://github.com/Bitvantage/InternetProtocol.NetworkPrefix</PackageProjectUrl>
 		<PackageIcon>icon.png</PackageIcon>
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>network;networking;ip network;network prefix;prefix;ipaddress;ip address</PackageTags>
@@ -18,7 +18,14 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseExpression>AGPL-3.0-only</PackageLicenseExpression>
 		<Description>A library for working with IPv4 and IPV6 network prefixes.</Description>
+		<RepositoryUrl>https://github.com/Bitvantage/InternetProtocol.NetworkPrefix.git</RepositoryUrl>
+		<Copyright>Copyright © Michael Crino 2024</Copyright>
 
 	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="../README.md" Pack="true" PackagePath="" />
+		<None Include="../icon.png" Pack="true" PackagePath="" />
+	</ItemGroup>
 
 </Project>
