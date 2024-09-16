@@ -109,7 +109,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         {
             var allocation = Allocations
                 .Where(item => item.Key.ContainsOrEqual(this))
-                .MaxBy(item => item.Key.Prefix);
+                .MaxBy(item => item.Key.Length);
             
             return allocation.Value;
         }
@@ -122,7 +122,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         {
             var @class = Classes
                 .Where(item => item.Key.ContainsOrEqual(this))
-                .MaxBy(item => item.Key.Prefix);
+                .MaxBy(item => item.Key.Length);
 
             return @class.Value;
         }
@@ -139,17 +139,17 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
     {
         get
         {
-            if (Prefix == 0)
+            if (Length == 0)
                 throw new ArgumentException($"{this} has no complementary network");
 
             // XOR the last bit in the network
-            var complementaryBits = NetworkBits ^ (UInt128.One << (AddressLength - Prefix));
+            var complementaryBits = NetworkBits ^ (UInt128.One << (AddressLength - Length));
 
             // convert the bits to an IP address
             var complementaryAddress = UInt128ToIpAddress(complementaryBits);
 
             // construct a new network
-            var complementaryNetwork = new NetworkPrefix(complementaryAddress, Prefix);
+            var complementaryNetwork = new NetworkPrefix(complementaryAddress, Length);
 
             return complementaryNetwork;
         }
@@ -167,10 +167,10 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
             // /0's are network addresses, they have no host addresses
             // /31's and /127 have not network or broadcast address and are all host addresses
             // /32's and /128's are host addresses. Host addresses are the first and last address
-            if (Prefix == 0)
+            if (Length == 0)
                 throw new ArgumentOutOfRangeException();
 
-            if (Prefix >= AddressLength - 1)
+            if (Length >= AddressLength - 1)
                 return Address;
 
             return UInt128ToIpAddress(NetworkBits + 1);
@@ -189,13 +189,13 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
             // /0's are network addresses, they have no host addresses
             // /31's and /127 have not network or broadcast address and are all host addresses
             // /32's and /128's are host addresses. Host addresses are the first and last address
-            if (Prefix == 0)
+            if (Length == 0)
                 throw new ArgumentOutOfRangeException();
 
-            if (Prefix == AddressLength)
+            if (Length == AddressLength)
                 return Address;
 
-            if (Prefix == AddressLength - 1)
+            if (Length == AddressLength - 1)
                 return UInt128ToIpAddress(NetworkBits ^ HostMaskBits);
 
             return UInt128ToIpAddress(NetworkBits ^ (HostMaskBits - 1)); // BUG: is this correct?
@@ -211,8 +211,8 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         {
             return Version switch
             {
-                IPVersion.IPv4 => Ipv4NetworkMaskObjects[Prefix],
-                IPVersion.IPv6 => Ipv6NetworkMaskObjects[Prefix],
+                IPVersion.IPv4 => Ipv4NetworkMaskObjects[Length],
+                IPVersion.IPv6 => Ipv6NetworkMaskObjects[Length],
                 _ => throw new ArgumentOutOfRangeException()
             };
         }
@@ -227,8 +227,8 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         {
             return Version switch
             {
-                IPVersion.IPv4 => Ipv4AddressCount[Prefix],
-                IPVersion.IPv6 => Ipv6AddressCount[Prefix],
+                IPVersion.IPv4 => Ipv4AddressCount[Length],
+                IPVersion.IPv6 => Ipv6AddressCount[Length],
                 _ => throw new ArgumentOutOfRangeException()
             };
         }
@@ -243,8 +243,8 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         {
             return Version switch
             {
-                IPVersion.IPv4 => Ipv4HostCount[Prefix],
-                IPVersion.IPv6 => Ipv6HostCount[Prefix],
+                IPVersion.IPv4 => Ipv4HostCount[Length],
+                IPVersion.IPv6 => Ipv6HostCount[Length],
                 _ => throw new ArgumentOutOfRangeException()
             };
         }
@@ -260,8 +260,8 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         {
             return Version switch
             {
-                IPVersion.IPv4 => Ipv4HostMaskObjects[Prefix],
-                IPVersion.IPv6 => Ipv6HostMaskObjects[Prefix],
+                IPVersion.IPv4 => Ipv4HostMaskObjects[Length],
+                IPVersion.IPv6 => Ipv6HostMaskObjects[Length],
                 _ => throw new ArgumentOutOfRangeException()
             };
         }
@@ -273,9 +273,9 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
     public IPAddress Address { get; set; }
 
     /// <summary>
-    ///     The number of bits that are used to represent the <c>NetworkPrefix</c> portion of the address
+    ///     The length of the prefix that is used to represent the <c>NetworkPrefix</c> portion of the address
     /// </summary>
-    public int Prefix { get; set; }
+    public int Length { get; set; }
 
     /// <summary>
     ///     The version of Internet Protocol represented by the <c>NetworkPrefix</c>
@@ -518,7 +518,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
             return false;
 
         // a small network can't contain a bigger one...
-        if (Prefix >= networkPrefix.Prefix)
+        if (Length >= networkPrefix.Length)
             return false;
 
         // the smaller network must have the same network prefix as the larger network
@@ -545,7 +545,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
             return false;
 
         // a small network can't contain a bigger one...
-        if (Prefix > networkPrefix.Prefix)
+        if (Length > networkPrefix.Length)
             return false;
 
         // the smaller network must have the same network prefix as the larger network
@@ -564,7 +564,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
             return false;
 
         var network = (NetworkPrefix)obj;
-        return network.Address.Equals(Address) && network.Prefix == Prefix;
+        return network.Address.Equals(Address) && network.Length == Length;
     }
 
 
@@ -594,7 +594,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
             throw new ArgumentException("Networks must be from the same address family");
 
         // special case: if either network has a prefix of 0, then the only network that can contain it is 0.0.0.0/0
-        if (network1.Prefix == 0 || network2.Prefix == 0)
+        if (network1.Length == 0 || network2.Length == 0)
             return new NetworkPrefix(IPAddress.None, 0);
 
         // figure out the most specific prefix that includes both networks
@@ -608,7 +608,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
 
         // if there are no significant bits then the network is completely contained by the network with the smaller prefix
         if (mostSignificantBit == 0)
-            return network1.Prefix < network2.Prefix ? network1 : network2;
+            return network1.Length < network2.Length ? network1 : network2;
 
         // in the above example the split needs to occur at prefix 31
         // which is the most specific set bit
@@ -657,7 +657,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
     {
         var hashCode = new HashCode();
 
-        hashCode.Add(Prefix);
+        hashCode.Add(Length);
         hashCode.AddBytes(Address.GetAddressBytes());
 
         return hashCode.ToHashCode();
@@ -672,12 +672,12 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         UInt128 startAddress;
         UInt128 endAddress;
 
-        if (Prefix == AddressLength) // /32 and /128 are host addresses
+        if (Length == AddressLength) // /32 and /128 are host addresses
         {
             startAddress = NetworkBits;
             endAddress = NetworkBits;
         }
-        else if (Prefix == AddressLength - 1) // /31 and /127 are point to point addresses
+        else if (Length == AddressLength - 1) // /31 and /127 are point to point addresses
         {
             startAddress = NetworkBits;
             endAddress = NetworkBits + UInt128.One;
@@ -710,18 +710,18 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         {
             checked
             {
-                var addressesPerNetwork = UInt128.One << (networkPrefix.AddressLength - networkPrefix.Prefix);
+                var addressesPerNetwork = UInt128.One << (networkPrefix.AddressLength - networkPrefix.Length);
                 var addressesToAdd = addressesPerNetwork * valueToAdd;
                 var networkBits = networkPrefix.NetworkBits + addressesToAdd;
 
-                if (networkPrefix.Version == IPVersion.IPv4 && networkBits > Ipv4NetworkMaskBits[networkPrefix.Prefix])
+                if (networkPrefix.Version == IPVersion.IPv4 && networkBits > Ipv4NetworkMaskBits[networkPrefix.Length])
                     throw new ArgumentOutOfRangeException();
 
-                if (networkPrefix.Version == IPVersion.IPv6 && networkBits > Ipv6NetworkMaskBits[networkPrefix.Prefix])
+                if (networkPrefix.Version == IPVersion.IPv6 && networkBits > Ipv6NetworkMaskBits[networkPrefix.Length])
                     throw new ArgumentOutOfRangeException();
 
                 var ipAddress = networkBits.ToIpAddress(networkPrefix.Version);
-                var newNetwork = new NetworkPrefix(ipAddress, networkPrefix.Prefix);
+                var newNetwork = new NetworkPrefix(ipAddress, networkPrefix.Length);
 
                 return newNetwork;
             }
@@ -740,7 +740,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         if (ReferenceEquals(network1, null) || ReferenceEquals(network2, null))
             return false;
 
-        return network1.Address.Equals(network2.Address) && network1.Prefix == network2.Prefix;
+        return network1.Address.Equals(network2.Address) && network1.Length == network2.Length;
     }
 
     public static bool operator >(NetworkPrefix network1, NetworkPrefix network2)
@@ -751,7 +751,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
 
         // if both side have the same network bits, then the one with the biggest mask is greater 
         if (network1.NetworkBits == network2.NetworkBits)
-            return network1.Prefix > network2.Prefix;
+            return network1.Length > network2.Length;
 
         // otherwise the one with the biggest network is biggest
         return network1.NetworkBits > network2.NetworkBits;
@@ -780,7 +780,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
 
         // if both side have the same network bits, then the one with the smallest mask is smaller 
         if (network1.NetworkBits == network2.NetworkBits)
-            return network1.Prefix < network2.Prefix;
+            return network1.Length < network2.Length;
 
         // otherwise the one with the smallest network is smallest
         return network1.NetworkBits < network2.NetworkBits;
@@ -792,18 +792,18 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         {
             checked
             {
-                var addressesPerNetwork = UInt128.One << (networkPrefix.AddressLength - networkPrefix.Prefix);
+                var addressesPerNetwork = UInt128.One << (networkPrefix.AddressLength - networkPrefix.Length);
                 var addressToSubtract = addressesPerNetwork * valueToSubtract;
                 var networkBits = networkPrefix.NetworkBits - addressToSubtract;
 
-                if (networkPrefix.Version == IPVersion.IPv4 && networkBits > Ipv4NetworkMaskBits[networkPrefix.Prefix])
+                if (networkPrefix.Version == IPVersion.IPv4 && networkBits > Ipv4NetworkMaskBits[networkPrefix.Length])
                     throw new ArgumentOutOfRangeException();
 
-                if (networkPrefix.Version == IPVersion.IPv6 && networkBits > Ipv6NetworkMaskBits[networkPrefix.Prefix])
+                if (networkPrefix.Version == IPVersion.IPv6 && networkBits > Ipv6NetworkMaskBits[networkPrefix.Length])
                     throw new ArgumentOutOfRangeException();
 
                 var ipAddress = networkBits.ToIpAddress(networkPrefix.Version);
-                var newNetwork = new NetworkPrefix(ipAddress, networkPrefix.Prefix);
+                var newNetwork = new NetworkPrefix(ipAddress, networkPrefix.Length);
 
                 return newNetwork;
             }
@@ -852,7 +852,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
     /// <exception cref="InvalidOperationException">Insufficient number network bits to perform the split</exception>
     public IEnumerable<NetworkPrefix> Split()
     {
-        return Split(Prefix + 1);
+        return Split(Length + 1);
     }
 
     /// <summary>
@@ -866,7 +866,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
             throw new InvalidOperationException($"The split target for {this} of {Address}/{prefixLength} is not valid");
 
         var sizeOfNewNetworks = UInt128.One << (AddressLength - prefixLength);
-        var numberOfNewNetworks = UInt128.One << (prefixLength - Prefix);
+        var numberOfNewNetworks = UInt128.One << (prefixLength - Length);
 
         var currentNetworkBits = NetworkBits;
         for (UInt128 i = 0; i < numberOfNewNetworks; i++)
@@ -897,7 +897,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
 
         // add each network to the lookup by prefix
         foreach (var network in networks)
-            networksByPrefix[network.Prefix].Add(network.Address, network);
+            networksByPrefix[network.Length].Add(network.Address, network);
 
         // go through each possible prefix, starting with the largest prefix
         for (var prefixLength = 128; prefixLength > 0; prefixLength--)
@@ -947,7 +947,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         switch (format)
         {
             case NetworkFormat.AddressAndPrefix:
-                return $"{Address}/{Prefix}";
+                return $"{Address}/{Length}";
 
             case NetworkFormat.AddressAndMask:
                 return $"{Address} {Mask}";
@@ -968,7 +968,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
                 networkProperty.Add(new ValueTuple<string, string, string>("Wildcard:", Wildcard.ToString(), BitsToString(Wildcard)));
                 networkProperty.Add(new ValueTuple<string, string, string>("Broadcast:", Broadcast.ToString(), BitsToString(Broadcast)));
 
-                if (Prefix > 0)
+                if (Length > 0)
                 {
                     networkProperty.Add(new ValueTuple<string, string, string>("First Host:", FirstHost.ToString(), BitsToString(FirstHost)));
                     networkProperty.Add(new ValueTuple<string, string, string>("Last Host:", LastHost.ToString(), BitsToString(LastHost)));
@@ -1101,7 +1101,7 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
             throw new ArgumentOutOfRangeException(nameof(prefix), "Maximum mask length of a IPv6 address is 128");
 
         Address = ipAddress;
-        Prefix = prefix;
+        Length = prefix;
 
         Version = ipAddress.AddressFamily switch
         {
@@ -1112,15 +1112,15 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
 
         NetworkMaskBits = Version switch
         {
-            IPVersion.IPv4 => Ipv4NetworkMaskBits[Prefix],
-            IPVersion.IPv6 => Ipv6NetworkMaskBits[Prefix],
+            IPVersion.IPv4 => Ipv4NetworkMaskBits[Length],
+            IPVersion.IPv6 => Ipv6NetworkMaskBits[Length],
             _ => throw new ArgumentOutOfRangeException()
         };
 
         HostMaskBits = Version switch
         {
-            IPVersion.IPv4 => Ipv4HostMaskBits[Prefix],
-            IPVersion.IPv6 => Ipv6HostMaskBits[Prefix],
+            IPVersion.IPv4 => Ipv4HostMaskBits[Length],
+            IPVersion.IPv6 => Ipv6HostMaskBits[Length],
             _ => throw new ArgumentOutOfRangeException()
         };
 

@@ -302,7 +302,7 @@ public class NetworkPrefixTests
             var ipNetwork = new NetworkPrefix(testAddress.Address, testAddress.Prefix);
 
             Assert.That(ipNetwork.Address, Is.EqualTo(testAddress.Network));
-            Assert.That(ipNetwork.Prefix, Is.EqualTo(testAddress.Prefix));
+            Assert.That(ipNetwork.Length, Is.EqualTo(testAddress.Prefix));
             Assert.That(ipNetwork.Mask, Is.EqualTo(testAddress.Mask));
             Assert.That(ipNetwork.Broadcast, Is.EqualTo(testAddress.Broadcast));
             Assert.That(ipNetwork.Wildcard, Is.EqualTo(testAddress.Wildcard));
@@ -583,7 +583,7 @@ public class NetworkPrefixTests
             var ipNetwork = NetworkPrefix.Parse($"{testAddress.Address}/{testAddress.Prefix}");
 
             Assert.That(ipNetwork.Address, Is.EqualTo(testAddress.Network));
-            Assert.That(ipNetwork.Prefix, Is.EqualTo(testAddress.Prefix));
+            Assert.That(ipNetwork.Length, Is.EqualTo(testAddress.Prefix));
             Assert.That(ipNetwork.Mask, Is.EqualTo(testAddress.Mask));
             Assert.That(ipNetwork.Broadcast, Is.EqualTo(testAddress.Broadcast));
             Assert.That(ipNetwork.Wildcard, Is.EqualTo(testAddress.Wildcard));
@@ -614,7 +614,7 @@ public class NetworkPrefixTests
             var ipNetwork = NetworkPrefix.Parse($"{testAddress.Address} {testAddress.Mask}");
 
             Assert.That(ipNetwork.Address, Is.EqualTo(testAddress.Network));
-            Assert.That(ipNetwork.Prefix, Is.EqualTo(testAddress.Prefix));
+            Assert.That(ipNetwork.Length, Is.EqualTo(testAddress.Prefix));
             Assert.That(ipNetwork.Mask, Is.EqualTo(testAddress.Mask));
             Assert.That(ipNetwork.Broadcast, Is.EqualTo(testAddress.Broadcast));
             Assert.That(ipNetwork.Wildcard, Is.EqualTo(testAddress.Wildcard));
