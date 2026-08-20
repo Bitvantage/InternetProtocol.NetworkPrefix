@@ -249,6 +249,12 @@ public class NetworkPrefixTests
     }
 
     [Test]
+    public void CompareTo_IPv4_06()
+    {
+        Assert.That(NetworkPrefix.Parse("10.20.30.0/24").CompareTo(null), Is.GreaterThan(0));
+    }
+
+    [Test]
     public void ComplementaryNetwork_IPv4_01()
     {
         var network1 = NetworkPrefix.Parse("10.0.10.0/24");
@@ -317,6 +323,7 @@ public class NetworkPrefixTests
         var largerNetwork = NetworkPrefix.Parse("131.192.0.0/10");
 
         Assert.That(largerNetwork.ContainsOrEqual(NetworkPrefix.Parse("192.0.0.0/2")), Is.False);
+        Assert.That(largerNetwork.ContainedByOrEqual(NetworkPrefix.Parse("192.0.0.0/2")), Is.False);
     }
 
     [Test]
@@ -338,6 +345,69 @@ public class NetworkPrefixTests
         Assert.That(largerNetwork.Contains(NetworkPrefix.Parse("10.20.30.40/32")), Is.True);
         Assert.That(largerNetwork.Contains(NetworkPrefix.Parse("10.21.0.0/24")), Is.False);
         Assert.That(largerNetwork.Contains(NetworkPrefix.Parse("10.20.0.0/15")), Is.False);
+    }
+
+    [Test]
+    public void Contains_IPv4_03()
+    {
+        // a host prefix contains the single address that it represents
+        var hostPrefix = NetworkPrefix.Parse("10.20.30.40/32");
+
+        Assert.That(hostPrefix.Contains(IPAddress.Parse("10.20.30.40")), Is.True);
+        Assert.That(hostPrefix.Contains(IPAddress.Parse("10.20.30.41")), Is.False);
+
+        // every address within a network is contained by that network
+        var networkPrefix = NetworkPrefix.Parse("10.20.30.0/24");
+
+        Assert.That(networkPrefix.Contains(IPAddress.Parse("10.20.30.0")), Is.True);
+        Assert.That(networkPrefix.Contains(IPAddress.Parse("10.20.30.40")), Is.True);
+        Assert.That(networkPrefix.Contains(IPAddress.Parse("10.20.30.255")), Is.True);
+        Assert.That(networkPrefix.Contains(IPAddress.Parse("10.20.31.40")), Is.False);
+    }
+
+    [Test]
+    public void Contains_IPv6_01()
+    {
+        // a host prefix contains the single address that it represents
+        var hostPrefix = NetworkPrefix.Parse("2001:db8::1/128");
+
+        Assert.That(hostPrefix.Contains(IPAddress.Parse("2001:db8::1")), Is.True);
+        Assert.That(hostPrefix.Contains(IPAddress.Parse("2001:db8::2")), Is.False);
+
+        // every address within a network is contained by that network
+        var networkPrefix = NetworkPrefix.Parse("2001:db8::/32");
+
+        Assert.That(networkPrefix.Contains(IPAddress.Parse("2001:db8::1")), Is.True);
+        Assert.That(networkPrefix.Contains(IPAddress.Parse("2001:db9::1")), Is.False);
+    }
+
+    [Test]
+    public void ContainedBy_IPv4_01()
+    {
+        var smallerNetwork = NetworkPrefix.Parse("10.20.30.0/24");
+
+        Assert.That(smallerNetwork.ContainedBy(NetworkPrefix.Parse("10.20.0.0/16")), Is.True);
+        Assert.That(smallerNetwork.ContainedBy(NetworkPrefix.Parse("10.20.30.0/24")), Is.False);
+        Assert.That(smallerNetwork.ContainedBy(NetworkPrefix.Parse("10.20.30.0/25")), Is.False);
+        Assert.That(smallerNetwork.ContainedBy(NetworkPrefix.Parse("10.21.0.0/16")), Is.False);
+
+        Assert.That(smallerNetwork.ContainedByOrEqual(NetworkPrefix.Parse("10.20.0.0/16")), Is.True);
+        Assert.That(smallerNetwork.ContainedByOrEqual(NetworkPrefix.Parse("10.20.30.0/24")), Is.True);
+        Assert.That(smallerNetwork.ContainedByOrEqual(NetworkPrefix.Parse("10.20.30.0/25")), Is.False);
+        Assert.That(smallerNetwork.ContainedByOrEqual(NetworkPrefix.Parse("10.21.0.0/16")), Is.False);
+    }
+
+    [Test]
+    public void ContainedBy_IPv4_02()
+    {
+        // the contained-by pair is the inverse of the contains pair
+        var largerNetwork = NetworkPrefix.Parse("10.20.0.0/16");
+        var smallerNetwork = NetworkPrefix.Parse("10.20.30.0/24");
+
+        Assert.That(smallerNetwork.ContainedBy(largerNetwork), Is.EqualTo(largerNetwork.Contains(smallerNetwork)));
+        Assert.That(largerNetwork.ContainedBy(smallerNetwork), Is.EqualTo(smallerNetwork.Contains(largerNetwork)));
+        Assert.That(smallerNetwork.ContainedByOrEqual(largerNetwork), Is.EqualTo(largerNetwork.ContainsOrEqual(smallerNetwork)));
+        Assert.That(largerNetwork.ContainedByOrEqual(smallerNetwork), Is.EqualTo(smallerNetwork.ContainsOrEqual(largerNetwork)));
     }
 
     [Test]
@@ -479,6 +549,24 @@ public class NetworkPrefixTests
         var containingNetwork = NetworkPrefix.GetContainingNetwork(networks);
 
         Assert.That(containingNetwork, Is.EqualTo(NetworkPrefix.Parse("0.0.0.0/1")));
+    }
+
+    [Test]
+    public void GetContainingNetwork_IPv4_12()
+    {
+        // when one network contains the other, the containing network is the less specific of the two,
+        // even when the two do not share the same network address
+        Assert.That(NetworkPrefix.GetContainingNetwork("10.20.0.0/16", "10.20.30.0/24"), Is.EqualTo((NetworkPrefix)"10.20.0.0/16"));
+        Assert.That(NetworkPrefix.GetContainingNetwork("10.20.30.0/24", "10.20.0.0/16"), Is.EqualTo((NetworkPrefix)"10.20.0.0/16"));
+        Assert.That(NetworkPrefix.GetContainingNetwork("0.0.0.0/1", "10.20.30.0/24"), Is.EqualTo((NetworkPrefix)"0.0.0.0/1"));
+        Assert.That(NetworkPrefix.GetContainingNetwork("10.20.30.0/24", "10.20.30.40/32"), Is.EqualTo((NetworkPrefix)"10.20.30.0/24"));
+    }
+
+    [Test]
+    public void GetContainingNetwork_IPv6_01()
+    {
+        Assert.That(NetworkPrefix.GetContainingNetwork("2001:db8::/32", "2001:db8:1::/48"), Is.EqualTo((NetworkPrefix)"2001:db8::/32"));
+        Assert.That(NetworkPrefix.GetContainingNetwork("2001:db8::/48", "2001:db8:1::/48"), Is.EqualTo((NetworkPrefix)"2001:db8::/47"));
     }
 
     [Test]
@@ -644,6 +732,21 @@ public class NetworkPrefixTests
     }
 
 
+    [Test]
+    public void RemoveNetwork_IPv4_02()
+    {
+        var network = NetworkPrefix.Parse("10.20.30.0/29");
+
+        var expectedResult = new List<NetworkPrefix>
+        {
+            NetworkPrefix.Parse("10.20.30.4/30"),
+            NetworkPrefix.Parse("10.20.30.2/31"),
+            NetworkPrefix.Parse("10.20.30.0/32")
+        };
+
+        Assert.That(network.RemoveNetwork(NetworkPrefix.Parse("10.20.30.1/32")), Is.EqualTo(expectedResult));
+    }
+
     [SetUp]
     public void Setup()
     {
@@ -657,7 +760,7 @@ public class NetworkPrefixTests
 
         var result = new[]
         {
-            NetworkPrefix.Parse("10.20.30.64/25"),
+            NetworkPrefix.Parse("10.20.30.0/25"),
             NetworkPrefix.Parse("10.20.30.128/25")
         };
 
@@ -687,6 +790,65 @@ public class NetworkPrefixTests
         var ipNetwork = NetworkPrefix.Parse("10.20.30.40/32");
 
         Assert.Throws<InvalidOperationException>(() => ipNetwork.Split().ToArray());
+    }
+
+    [Test]
+    public void Split_IPv4_04()
+    {
+        var ipNetwork = NetworkPrefix.Parse("10.20.30.0/30");
+
+        var result = new[]
+        {
+            NetworkPrefix.Parse("10.20.30.0/32"),
+            NetworkPrefix.Parse("10.20.30.1/32"),
+            NetworkPrefix.Parse("10.20.30.2/32"),
+            NetworkPrefix.Parse("10.20.30.3/32")
+        };
+
+        Assert.That(ipNetwork.Split(32), Is.EqualTo(result));
+    }
+
+    [Test]
+    public void Split_IPv4_05()
+    {
+        // a point to point network splits into the two host prefixes that make it up
+        var ipNetwork = NetworkPrefix.Parse("10.20.30.0/31");
+
+        var result = new[]
+        {
+            NetworkPrefix.Parse("10.20.30.0/32"),
+            NetworkPrefix.Parse("10.20.30.1/32")
+        };
+
+        Assert.That(ipNetwork.Split(), Is.EqualTo(result));
+    }
+
+    [Test]
+    public void Split_IPv4_06()
+    {
+        var ipNetwork = NetworkPrefix.Parse("10.20.30.0/24");
+
+        // a target that is not more specific than the network is not a split
+        Assert.Throws<InvalidOperationException>(() => ipNetwork.Split(0).ToArray());
+        Assert.Throws<InvalidOperationException>(() => ipNetwork.Split(16).ToArray());
+        Assert.Throws<InvalidOperationException>(() => ipNetwork.Split(24).ToArray());
+
+        // a target more specific than a host prefix does not exist
+        Assert.Throws<InvalidOperationException>(() => ipNetwork.Split(33).ToArray());
+    }
+
+    [Test]
+    public void Split_IPv6_01()
+    {
+        var ipNetwork = NetworkPrefix.Parse("2001:db8::/127");
+
+        var result = new[]
+        {
+            NetworkPrefix.Parse("2001:db8::/128"),
+            NetworkPrefix.Parse("2001:db8::1/128")
+        };
+
+        Assert.That(ipNetwork.Split(), Is.EqualTo(result));
     }
 
     [Test]

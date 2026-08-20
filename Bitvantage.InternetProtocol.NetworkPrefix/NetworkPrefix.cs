@@ -492,16 +492,40 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
             yield return UInt128ToIpAddress(i);
     }
 
+    /// <summary>
+    ///     Determines if this <c>NetworkPrefix</c> is contained within the <paramref name="networkPrefix" />
+    /// </summary>
+    /// <param name="networkPrefix"></param>
+    /// <returns></returns>
+    public bool ContainedBy(NetworkPrefix networkPrefix)
+    {
+        return networkPrefix.Contains(this);
+    }
+
+    /// <summary>
+    ///     Determines if this <c>NetworkPrefix</c> is contained within the <paramref name="networkPrefix" /> or equal to it
+    /// </summary>
+    /// <param name="networkPrefix"></param>
+    /// <returns></returns>
     public bool ContainedByOrEqual(NetworkPrefix networkPrefix)
     {
         return networkPrefix.ContainsOrEqual(this);
     }
 
+    /// <summary>
+    ///     Determines if the
+    ///     <param name="address"></param>
+    ///     is contained within this network
+    /// </summary>
+    /// <param name="address"></param>
+    /// <returns></returns>
     public bool Contains(IPAddress address)
     {
         var hostNetwork = new NetworkPrefix(address);
 
-        return Contains(hostNetwork);
+        // an address is a member of this network rather than a network nested inside of it,
+        // so a host prefix, such as a /32 or a /128, contains the single address that it represents
+        return ContainsOrEqual(hostNetwork);
     }
 
     /// <summary>
@@ -526,11 +550,6 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
         // AND the network mask of this address to the network bits of the other network
         // if the network is contained by this network then the resulting network bits should be the same as this networks bits.
         return (networkPrefix.NetworkBits & NetworkMaskBits) == NetworkBits;
-    }
-
-    public bool ContainsBy(NetworkPrefix networkPrefix)
-    {
-        return networkPrefix.Contains(this);
     }
 
     /// <summary>
@@ -621,7 +640,12 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
 
         var newPrefix = network2.AddressLength - bitPosition - 1;
 
-        return new NetworkPrefix(network1.Address, newPrefix);
+        // when one network contains the other the differing bit sits inside the host portion of the less specific network,
+        // which produces a prefix that is too specific to cover it, so the result is never allowed to be
+        // more specific than the less specific of the two networks
+        var containingPrefix = Math.Min(newPrefix, Math.Min(network1.Length, network2.Length));
+
+        return new NetworkPrefix(network1.Address, containingPrefix);
     }
 
     /// <summary>
@@ -862,7 +886,8 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
     /// <exception cref="InvalidOperationException">Insufficient number network bits to perform the split</exception>
     public IEnumerable<NetworkPrefix> Split(int prefixLength)
     {
-        if (prefixLength >= AddressLength)
+        // the target has to be more specific than this network, and can be no more specific than a host prefix
+        if (prefixLength <= Length || prefixLength > AddressLength)
             throw new InvalidOperationException($"The split target for {this} of {Address}/{prefixLength} is not valid");
 
         var sizeOfNewNetworks = UInt128.One << (AddressLength - prefixLength);
@@ -1211,8 +1236,9 @@ public class NetworkPrefix : IComparable<NetworkPrefix>, IXmlSerializable
 
     public int CompareTo(NetworkPrefix? other)
     {
+        // by convention every instance sorts after null
         if (ReferenceEquals(other, null))
-            return -1;
+            return 1;
 
         if (other == this)
             return 0;
