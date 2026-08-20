@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - Unreleased
+## [2.0.0] - 2026-08-19
 
 This release corrects four cases where a boundary condition produced the wrong answer, and renames one
 method so that the containment API reads consistently. Every one of these changes can alter the result
