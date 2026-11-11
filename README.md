@@ -1,6 +1,13 @@
 # Bitvantage.InternetProtocol.NetworkPrefix
 A library for working with IPv4 and IPV6 network prefixes.
 
+> [!NOTE]
+> This package is succeeded by
+> [Bitvantage.InternetProtocol.IPNetworkExtensions](https://github.com/Bitvantage/InternetProtocol.IPNetworkExtensions),
+> which replaces the `NetworkPrefix` class with extension members on .NET's built-in `System.Net.IPNetwork`. Its
+> [migration guide](https://github.com/Bitvantage/InternetProtocol.IPNetworkExtensions/blob/main/MIGRATION.md) covers
+> moving from this package.
+
 ## Installing via NuGet Package Manager
 ```sh
 PM> NuGet\Install-Package Bitvantage.InternetProtocol.NetworkPrefix
